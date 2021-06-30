@@ -12,6 +12,7 @@ import com.androiddevs.runningappyt.others.Constants.ACTION_START_OR_RESUME_SERV
 import com.androiddevs.runningappyt.others.Constants.MAP_ZOOM
 import com.androiddevs.runningappyt.others.Constants.POLYLINE_COLOR
 import com.androiddevs.runningappyt.others.Constants.POLYLINE_WIDTH
+import com.androiddevs.runningappyt.others.TrackingUtility
 import com.androiddevs.runningappyt.services.Polyline
 import com.androiddevs.runningappyt.services.TrackingService
 import com.androiddevs.runningappyt.ui.viewmodels.MainViewModel
@@ -31,12 +32,14 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
 
     private var map: GoogleMap? = null
 
+    private var curTimeInMillis = 0L
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         mapView.onCreate(savedInstanceState)
 
         btnToggleRun.setOnClickListener {
-           toggleRun()
+            toggleRun()
         }
         mapView.getMapAsync {
             map = it
@@ -46,7 +49,7 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
         subscribeToObservers()
     }
 
-    private fun subscribeToObservers(){
+    private fun subscribeToObservers() {
         TrackingService.isTracking.observe(viewLifecycleOwner, Observer {
             updateTracking(it)
         })
@@ -57,30 +60,37 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
             moveCameraToUser()
         })
 
+        TrackingService.timeRunInMillis.observe(viewLifecycleOwner, Observer {
+            curTimeInMillis = it
+            val formattedTime = TrackingUtility.getFormattedStopWatchTime(curTimeInMillis, true)
+            tvTimer.text = formattedTime
+        })
+
     }
 
-    private fun toggleRun(){
-        if (isTracking){
+    private fun toggleRun() {
+        if (isTracking) {
             sendCommandToService(ACTION_PAUSED_SERVICE)
-        } else{
+        } else {
             sendCommandToService(ACTION_START_OR_RESUME_SERVICE)
         }
     }
-    private fun updateTracking(isTracking: Boolean){
+
+    private fun updateTracking(isTracking: Boolean) {
         this.isTracking = isTracking
 
-        if(!isTracking){
+        if (!isTracking) {
             btnToggleRun.text = "Start"
             btnFinishRun.visibility = View.VISIBLE
-        } else{
+        } else {
             btnToggleRun.text = "Stop"
             btnFinishRun.visibility = View.GONE
         }
     }
 
 
-    private fun moveCameraToUser(){
-        if (pathPoints.isNotEmpty() && pathPoints.last().isNotEmpty()){
+    private fun moveCameraToUser() {
+        if (pathPoints.isNotEmpty() && pathPoints.last().isNotEmpty()) {
             map?.animateCamera(
                 CameraUpdateFactory.newLatLngZoom(
                     pathPoints.last().last(),
@@ -90,8 +100,8 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
         }
     }
 
-    private fun addAllPolyline(){
-        for(polyline in pathPoints){
+    private fun addAllPolyline() {
+        for (polyline in pathPoints) {
             val polylineOptions = PolylineOptions()
                 .color(POLYLINE_COLOR)
                 .width(POLYLINE_WIDTH)
@@ -100,8 +110,8 @@ class TrackingFragment : Fragment(R.layout.fragment_tracking) {
         }
     }
 
-    private fun addLatestPolyline(){
-        if (pathPoints.isNotEmpty() && pathPoints.last().size>1){
+    private fun addLatestPolyline() {
+        if (pathPoints.isNotEmpty() && pathPoints.last().size > 1) {
             val preLastLatLng = pathPoints.last()[pathPoints.last().size - 2]
             val lastLatLng = pathPoints.last().last()
 
