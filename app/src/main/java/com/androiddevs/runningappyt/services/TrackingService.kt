@@ -111,6 +111,7 @@ class TrackingService : LifecycleService() {
 
     }
 
+    // location callback and get update location
     val locationCallback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult?) {
             super.onLocationResult(result)
